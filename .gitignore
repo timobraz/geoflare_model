@@ -1,5 +1,8 @@
 training
+ENV_DIR
 forest-trees-10/test
 forest-trees-10/valid
 forest-trees-10/train
-ENV_DIR
+yolov*
+runs/detect
+forest-trees/
