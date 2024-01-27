@@ -1,0 +1,12 @@
+names:
+- Tree
+nc: 1
+roboflow:
+  license: CC BY 4.0
+  project: forest-trees
+  url: https://universe.roboflow.com/test-dqo8y/forest-trees/dataset/10
+  version: 10
+  workspace: test-dqo8y
+test: ../test/images
+train: forest-trees-10/train/images
+val: forest-trees-10/valid/images
