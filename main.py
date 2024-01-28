@@ -2,8 +2,10 @@ from ultralytics import YOLO
 from PIL import Image
 import numpy as np
 import cv2
-from fastapi import FastAPI, File, UploadFile
-from typing_extensions import Annotated
+from fastapi import FastAPI
+from fastapi.responses import FileResponse
+import base64
+import requests
 
 app = FastAPI()
 model = YOLO("best.pt")
@@ -16,34 +18,55 @@ def predict(image):
 
 
 def to_list(results):
-    return results[0].boxes.cpu().xyxy.tolist()
+    return results[0].boxes.cpu().xywh.tolist()
 
 
 def overlay_rectangles(image, xyxys):
     for xyxy in xyxys:
         cv2.rectangle(
             image,
-            (int(xyxy[0]), int(xyxy[1])),
-            (int(xyxy[2]), int(xyxy[3])),
+            (
+                int(xyxy[0]),
+                int(xyxy[1]),
+                int(xyxy[2]),
+                int(xyxy[3]),
+            ),
             (0, 255, 0),
             3,
         )
-    image = Image.fromarray(image)
-    return image
+
+    img = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_GRAY2RGB))
+    return img
 
 
-results, image = predict(Image.open("test2.jpg"))
-results = to_list(results)
-print("done")
-(overlay_rectangles(image, results))
-print("rec")
+# results, image = predict(Image.open("test2.jpg"))
+# results = to_list(results)
+# print("done")
+
+# print("rec")
 
 
-@app.post("/inference/")
-async def inference(file: UploadFile):
-    print({"file": file.filename})
-    results, image = predict(Image.open("test2.jpg"))
-    return to_list(results)
+@app.get("/inference")
+async def inference(
+    center,
+    zoom=17,
+):
+    print(center)
+    r = requests.get(
+        f"https://maps.googleapis.com/maps/api/staticmap?center={center}&zoom={zoom}&scale=1&maptype=satellite&size=1920x1080&key=AIzaSyDEeRLQUVP2qJ1Q1_iiVYIziCdDUPzgqsc",
+        "res.png",
+    )
+    with open("res.png", "wb") as f:
+        f.write(r.content)
+
+    img = Image.open("res.png")
+    # return FileResponse("res.png")
+    results, image = predict(img)
+    results = to_list(results)
+    overlay_rectangles(image, results).save("overlayed.png")
+    with open("res.png", "rb") as image_file:
+        encoded_string = base64.b64encode(image_file.read())
+    return {"image": encoded_string, "boxes": results}
 
 
 @app.get("/")
